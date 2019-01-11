@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System;
+using System.IO;
 using LuceneWebSearch.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -10,28 +11,31 @@ namespace LuceneWebSearch.Controllers
 {
     public class SearchController : Controller
     {
-        SearchEngine engine;
-        string indexLocation;
-        public SearchController(IConfiguration configuration)
+        //readonly string _indexLocation;
+        private readonly ISearchEngine _engine;
+
+        public SearchController(IConfiguration configuration, ISearchEngine engine)
         {
-            indexLocation = configuration["SearchIndexLocation"];
-            if (!Directory.Exists(indexLocation))
-            {
-                Directory.CreateDirectory(indexLocation);
-            }
-           // DeleteIndexFiles();
-             
-            engine = new SearchEngine(indexLocation);
-            
-          //  engine.BuildIndex();
+            _engine = engine;
+            // indexLocation = configuration["SearchIndexLocation"];
+            // if (!Directory.Exists(indexLocation))
+            // {
+            //     Directory.CreateDirectory(indexLocation);
+            // }
+            //// DeleteIndexFiles();
+
+            // engine = new SearchEngine(indexLocation);
+
+            //  engine.BuildIndex();
         }
+   
         // GET: /<controller>/
         public IActionResult Index(string search)
         {
             SearchResults results = new SearchResults();
             if (!string.IsNullOrEmpty(search))
             {
-                 results = engine.Search(search);
+                 results = _engine.Search(search);
             }
             SearchIndexModel model = new SearchIndexModel
             {
@@ -44,7 +48,7 @@ namespace LuceneWebSearch.Controllers
         {
            // engine = new SearchEngine(indexLocation);
 
-            engine.BuildIndex();
+            _engine.BuildIndex();
             return RedirectToAction("Index");
 
         }
@@ -58,29 +62,45 @@ namespace LuceneWebSearch.Controllers
                 Rating = "R"
 
             };
-            engine.UpdateMovie(movie);
+            _engine.UpdateMovie(movie);
             return RedirectToAction("Index", new { Search = "Bodygurard" });
         }
-        public IActionResult DeleteIndexes()
+        //public IActionResult DeleteIndexes()
+        //{
+        //    DeleteIndexFiles();
+        //    return RedirectToAction("Index");
+        //}
+
+        public ActionResult ClearIndex()
         {
-            DeleteIndexFiles();
+            if (_engine.ClearLuceneIndex())
+                TempData["Result"] = "Search index was cleared successfully!";
+            else
+                TempData["ResultFail"] = "Index is locked and cannot be cleared, try again later or clear manually!";
             return RedirectToAction("Index");
         }
-        private  void DeleteIndexFiles()
+
+        public ActionResult ClearIndexRecord(int id)
         {
-            foreach (FileInfo f in new DirectoryInfo(indexLocation)?.GetFiles())
-            {
-                try
-                {
-                    f?.Delete();
-                }
-                catch (System.Exception ex)
-                {
-                    System.Console.WriteLine(ex.Message);
-                 
-                }
-            }
+            _engine.ClearLuceneIndexRecord(id);
+            TempData["Result"] = "Search index record was deleted successfully!";
+            return RedirectToAction("Index");
         }
+        //private  void DeleteIndexFiles()
+        //{
+        //    foreach (FileInfo f in new DirectoryInfo(_indexLocation)?.GetFiles())
+        //    {
+        //        try
+        //        {
+        //            f?.Delete();
+        //        }
+        //        catch (System.Exception ex)
+        //        {
+        //            System.Console.WriteLine(ex.Message);
+                 
+        //        }
+        //    }
+        //}
 
 
     }

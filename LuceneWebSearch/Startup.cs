@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SearchLib;
 
 namespace LuceneWebSearch
 {
@@ -33,6 +34,8 @@ namespace LuceneWebSearch
 
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
+            string indexLocation = Configuration["SearchIndexLocation"];
+            services.AddScoped<ISearchEngine>(provider=> new SearchEngine(indexLocation));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

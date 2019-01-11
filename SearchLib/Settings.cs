@@ -1,9 +1,9 @@
-﻿namespace SearchLib
+namespace SearchLib
 {
     public static class Settings
     {
         public static string IndexLocation { get; set; } = @"C:\Temp\Index";
 
-        public static string MovieJsonFile { get; set; } = @"C:\Temp\movies.json";
+        public static string MovieJsonFile { get; set; } = @"H:\Tmp\movies.json";
     }
 }

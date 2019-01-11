@@ -1,5 +1,6 @@
-﻿using Lucene.Net.Index;
+using Lucene.Net.Index;
 using Lucene.Net.Store;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace SearchLib
@@ -13,6 +14,15 @@ namespace SearchLib
         {
             index = new MovieIndex(indexLocation);
             _indexLocation = indexLocation;
+            var files = System.IO.Directory.GetFiles(indexLocation);
+            var indexFiles = files.Where(x => !x.EndsWith("write.lock"));
+            var fileCount = indexFiles.Count();
+
+            var filesExist = fileCount > 0; // !System.IO.Directory.EnumerateFiles(indexLocation).Any(x=> !x.EndsWith("write.lock"));
+            if (!filesExist)
+            {
+                BuildIndex();
+            }
         }
 
         public void ReleaseWriterLock(string indexLocation)
@@ -44,5 +54,14 @@ namespace SearchLib
             return results;
         }
 
+        public bool ClearLuceneIndex()
+        {
+           return  index.ClearLuceneIndex();
+        }
+
+        public void ClearLuceneIndexRecord(int movieId)
+        {
+            index.ClearLuceneIndexRecord(movieId);
+        }
     }
 }

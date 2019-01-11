@@ -1,5 +1,6 @@
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Standard;
+using Lucene.Net.Analysis.TokenAttributes;
 using Lucene.Net.Documents;
 using Lucene.Net.Index;
 using Lucene.Net.QueryParsers.Classic;
@@ -8,6 +9,7 @@ using Lucene.Net.Store;
 using Lucene.Net.Util;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace SearchLib
@@ -25,7 +27,7 @@ namespace SearchLib
                 if (_writer == null)
                 {
                     IndexWriterConfig indexWriterConfig =
-                                new IndexWriterConfig(MATCH_LUCENE_VERSION, SetupAnalyzer());
+                                new IndexWriterConfig(MATCH_LUCENE_VERSION, SetupAnalyzer()) { OpenMode = OpenMode.CREATE_OR_APPEND};
                     _writer = new IndexWriter(_directory, indexWriterConfig);
                 }
                 return _writer;
@@ -128,8 +130,12 @@ namespace SearchLib
             int resultsPerPage = 10;
             var analyzer = SetupAnalyzer();
             var queryParser = SetupQueryParser(analyzer);
-            Query query = BuildQuery(queryString,queryParser);
-           
+            IEnumerable<FieldDefinition> fields = new List<FieldDefinition> {
+                new FieldDefinition{Name="Title", isDefault=true},
+                new FieldDefinition{Name="description", isDefault=false }
+            };
+            Query query = BuildQuery(queryString,queryParser); // BuildQuery(queryString, fields); // 
+
 
             using (var writer = new IndexWriter(_directory,
                 new IndexWriterConfig(MATCH_LUCENE_VERSION, analyzer)))
@@ -224,9 +230,27 @@ namespace SearchLib
                 : $"{description.Substring(0, SNIPPET_LENGTH)}...";
         }
 
+        private IList<string> Tokenize(string userInput, string field)
+        {
+            List<string> tokens = new List<string>();
+            var analyzer = SetupAnalyzer();
+            using (var reader = new StringReader(userInput))
+            {
+                using (TokenStream stream = analyzer.GetTokenStream(field, reader))
+                {
+                    stream.Reset();
+                    while (stream.IncrementToken())
+                    {
+                        tokens.Add(stream.GetAttribute<ICharTermAttribute>().ToString());
+                    }
+                }
+            }
+            return tokens;
+        }
+        
         private Analyzer SetupAnalyzer()
         {
-            return new StandardAnalyzer(MATCH_LUCENE_VERSION, StandardAnalyzer.STOP_WORDS_SET);
+            return new EnhancedEnglishAnalyzer(MATCH_LUCENE_VERSION, StandardAnalyzer.STOP_WORDS_SET);
         }
         private QueryParser SetupQueryParser(Analyzer analyzer)
         {
@@ -300,6 +324,68 @@ namespace SearchLib
            
           //  analyzer?.Dispose();
             writer?.Dispose();
+        }
+
+        class FieldDefinition
+        {
+            public string Name { get; set; }
+            public bool isDefault { get; set; } = false;
+        }
+        private Query BuildQuery(string userInput, IEnumerable<FieldDefinition> fields)
+        {
+            BooleanQuery query = new BooleanQuery();
+            
+            var tokens = Tokenize(userInput, "title");
+
+            if (tokens.Count > 1)
+            {
+                FieldDefinition defaultField = fields.FirstOrDefault(f => f.isDefault == true);
+                query.Add(BuildExactPhaseQuery(tokens, defaultField), Occur.SHOULD);
+
+                foreach (var q in GetIncrementalMatchQuery(tokens, defaultField))
+                {
+                    query.Add(q, Occur.SHOULD);
+                }
+            }
+
+            //create a term query per field - non boosted
+            foreach (var token in tokens)
+            {
+                foreach (var field in fields)
+                {
+                    query.Add(new TermQuery(new Term(field.Name, token)), Occur.SHOULD);
+                }
+            }
+
+            return query;
+
+        }
+
+        private IEnumerable<Query> GetIncrementalMatchQuery(IList<string> tokens, FieldDefinition field)
+        {
+            BooleanQuery bq = new BooleanQuery();
+            foreach (var token in tokens)
+                bq.Add(new TermQuery(new Term(field.Name, token)), Occur.SHOULD);
+
+            //5 comes from config - code omitted
+            int upperLimit = Math.Min(tokens.Count, 5);
+            for (int match = 2; match <= upperLimit; match++)
+            {
+                BooleanQuery q = bq.Clone() as BooleanQuery;
+                q.Boost = match * 3;
+                q.MinimumNumberShouldMatch = match;
+                yield return q;
+            }
+        }
+
+        private Query BuildExactPhaseQuery(IList<string> tokens, FieldDefinition field)
+        {
+            //boost factor (6) and slop (2) come from configuration - code omitted for simplicity
+            PhraseQuery pq = new PhraseQuery() { Boost = tokens.Count * 6, Slop = 2 };
+            foreach (var token in tokens)
+                pq.Add(new Term(field.Name, token));
+
+            return pq;
         }
     }
 }

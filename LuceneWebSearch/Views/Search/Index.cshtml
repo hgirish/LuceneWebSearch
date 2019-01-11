@@ -1,0 +1,36 @@
+﻿@model SearchIndexModel
+@{
+    ViewData["Title"] = $"Search for '{Model.Search}'";
+}
+
+<form asp-action="Index" method="post">
+   Search: <input type="search" asp-for="Search" />
+</form>
+
+<h1>Search for: @Model.Search</h1>
+
+<h3>Found @Model.Results.TotalHits result(s).</h3>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>MovieId</th>
+            <th>Rating</th>
+            <th>Score</th>
+            <th>Title</th>
+            <th>Snippert</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var result in Model.Results.Hits)
+        {
+            <tr>
+                <td>@result.MovieId</td>
+                <td>@result.Rating</td>
+                <td>@result.Score</td>
+                <td>@result.Title</td>
+                <td>@result.Snippet</td>
+            </tr>
+        }
+    </tbody>
+</table>

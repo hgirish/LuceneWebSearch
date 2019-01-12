@@ -9,11 +9,17 @@ namespace SearchLib
     {
         private readonly MovieIndex index;
         private readonly string _indexLocation;
+        private readonly string _moviesJsonPath;
 
-        public SearchEngine(string indexLocation)
+        public SearchEngine(string indexLocation, string moviesJsonPath)
         {
+            if (!System.IO.Directory.Exists(indexLocation))
+            {
+                System.IO.Directory.CreateDirectory(indexLocation);
+            }
             index = new MovieIndex(indexLocation);
             _indexLocation = indexLocation;
+            _moviesJsonPath = moviesJsonPath;
             var files = System.IO.Directory.GetFiles(indexLocation);
             var indexFiles = files.Where(x => !x.EndsWith("write.lock"));
             var fileCount = indexFiles.Count();
@@ -40,7 +46,7 @@ namespace SearchLib
         {
              index.UpdateMovieDocument(movie);
         }
-        public void BuildIndex() => index.BuildIndex(Repository.GetMoviesFromFile());
+        public void BuildIndex() => index.BuildIndex(Repository.GetMoviesFromFile(_moviesJsonPath));
 
         public SearchResults Search(string query)
         {

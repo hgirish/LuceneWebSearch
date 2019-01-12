@@ -6,8 +6,10 @@ namespace SearchLib
 {
     public class Repository
     {
-        public static IEnumerable<Movie> GetMoviesFromFile() => 
-            JsonConvert.DeserializeObject<List<Movie>>(File.ReadAllText(Settings.MovieJsonFile));
+        public static IEnumerable<Movie> GetMoviesFromFile(string movieJsonPath)
+        {
+            return JsonConvert.DeserializeObject<List<Movie>>(File.ReadAllText(movieJsonPath));
+        }
     }
 
 }

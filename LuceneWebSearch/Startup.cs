@@ -35,7 +35,8 @@ namespace LuceneWebSearch
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
             string indexLocation = Configuration["SearchIndexLocation"];
-            services.AddScoped<ISearchEngine>(provider=> new SearchEngine(indexLocation));
+            string moviesJsonPath = Configuration["MoviesJsonPath"];
+            services.AddScoped<ISearchEngine>(provider=> new SearchEngine(indexLocation, moviesJsonPath));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

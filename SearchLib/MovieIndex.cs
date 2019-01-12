@@ -43,7 +43,7 @@ namespace SearchLib
             get
             {
                 if (_tempDirectory == null)
-                {
+                {                    
                     _tempDirectory = FSDirectory.Open(_indexPath);                 
                 }
                 if (IndexWriter.IsLocked(_tempDirectory))
@@ -131,11 +131,19 @@ namespace SearchLib
             var analyzer = SetupAnalyzer();
             var queryParser = SetupQueryParser(analyzer);
             IEnumerable<FieldDefinition> fields = new List<FieldDefinition> {
-                new FieldDefinition{Name="Title", isDefault=true},
+                new FieldDefinition{Name="title", isDefault=true},
                 new FieldDefinition{Name="description", isDefault=false }
             };
-            Query query = BuildQuery(queryString,queryParser); // BuildQuery(queryString, fields); // 
-
+            // Query query = BuildQuery(queryString,queryParser); // BuildQuery(queryString, fields); // 
+            Query query;
+            if (queryString.EndsWith('~'))
+            {
+                query = BuildQuery(queryString, queryParser);
+            }
+           else
+            {
+                query = BuildQuery(queryString, fields);
+            }
 
             using (var writer = new IndexWriter(_directory,
                 new IndexWriterConfig(MATCH_LUCENE_VERSION, analyzer)))
